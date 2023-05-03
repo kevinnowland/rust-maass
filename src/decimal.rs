@@ -8,7 +8,6 @@
 /// The number is 95 bits (first bit indicates positive or negative)
 /// and so prec indicates how many bits are precise, including
 /// leading zeros.
-///
 #[derive(Copy, Clone, Debug)]
 pub struct Decimal {
     high: u32,
@@ -18,7 +17,7 @@ pub struct Decimal {
 }
 
 impl Decimal {
-    pub fn new(high: u32, med: u32, low: u32, prec: u8) -> Result<Decimal, String> {
+    pub fn new(high: u32, med: u32, low: u32, prec: u8) -> Result<Self, String> {
         if prec == 0 || prec > 95 {
             Err("invalid prec, must be in (0, 96)".to_owned())
         } else {
@@ -31,21 +30,39 @@ impl Decimal {
         }
     }
 
-    /// provide a string representation in decimal
-    pub fn to_string(&self) -> String {
-        todo!()
+    /// ensure first bit of high is zero
+    fn unsign(&self) -> Decimal {
+        Decimal {
+            high: (self.high << 1) >> 1,
+            med: self.med,
+            low: self.low,
+            prec: self.prec,
+        }
     }
 
-    /// indicates whether number is positive
+    /// check if underlying bits are all zero,
     ///
-    /// number might not have all zero bits if
-    /// it is zero to its level of precision
-    pub fn is_positive(&self) -> bool {
-        (self.high >> 31) == 0 && !self.is_zero()
+    /// ignores precision, checks all bits
+    pub fn is_zero(&self) -> bool {
+        (self.high == 0) && (self.med == 0) && (self.low == 0)
     }
 
-    /// indicates whether number is zero taking precision into account
-    pub fn is_zero(&self) -> bool {
+    /// check if underlying bits represent positive number
+    ///
+    /// ignores precision, just checks first bit and not zero
+    pub fn is_positive(&self) -> bool {
+        ((self.high >> 31) == 0) && !self.is_zero()
+    }
+
+    /// check if underlying bits reprsent negative number
+    ///
+    /// ignores precision, just checks first bit and not zero
+    pub fn is_negative(&self) -> bool {
+        (self.high >> 31) == 1
+    }
+
+    /// checks if number is zero taking precision into account
+    pub fn is_approx_zero(&self) -> bool {
         if self.prec < 31 {
             ((self.high << 1) >> (self.prec + 1)) == 0
         } else if self.prec < 63 {
@@ -55,6 +72,27 @@ impl Decimal {
         } else {
             ((self.high << 1) == 0) && (self.med == 0) && (self.high == 0)
         }
+    }
+
+    /// checks if number is positive up to precision
+    ///
+    /// number might not have all zero bits if
+    /// it is zero to its level of precision
+    pub fn is_approx_positive(&self) -> bool {
+        self.is_positive() && !self.is_approx_zero()
+    }
+
+    /// checks if number is negative up to precision
+    ///
+    /// number might not have all zero bits if
+    /// it is zero to its level of precision
+    pub fn is_approx_negative(&self) -> bool {
+        self.is_negative() && !self.is_approx_zero()
+    }
+
+    /// provide a string representation in decimal
+    pub fn to_string(&self) -> String {
+        todo!()
     }
 }
 
